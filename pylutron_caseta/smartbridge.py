@@ -10,7 +10,7 @@ except ImportError:
     # For Python 3.6 and earlier, we have to use get_event_loop instead
     from asyncio import get_event_loop as get_loop
 
-from . import _LEAP_DEVICE_TYPES, FAN_OFF, OCCUPANCY_GROUP_UNKNOWN
+from . import _LEAP_DEVICE_TYPES, FAN_OFF, OCCUPANCY_GROUP_UNKNOWN, BUTTON_GROUP_UNKNOWN
 from .leap import open_connection, id_from_href
 
 _LOG = logging.getLogger(__name__)
@@ -34,11 +34,13 @@ class Smartbridge:
         self.devices = {}
         self.scenes = {}
         self.occupancy_groups = {}
+        self.button_groups = {}
         self.areas = {}
         self.logged_in = False
         self._connect = connect
         self._subscribers = {}
         self._occupancy_subscribers = {}
+        self._button_subscribers = {}
         self._login_lock = asyncio.Lock()
         self._reader = None
         self._writer = None
@@ -86,6 +88,15 @@ class Smartbridge:
         :param callback_: callback to invoke
         """
         self._occupancy_subscribers[occupancy_group_id] = callback_
+
+    def add_button_subscriber(self, button_group_id, callback_):
+        """
+        Add a listener to be notified of button state changes.
+
+        :param button_group_id: button group id, e.g., 2
+        :param callback_: callback to invoke
+        """
+        self._button_subscribers[button_group_id] = callback_
 
     def get_devices(self):
         """Will return all known devices connected to the Smart Bridge."""
@@ -367,10 +378,30 @@ class Smartbridge:
             if occgroup_id in self._occupancy_subscribers:
                 self._occupancy_subscribers[occgroup_id]()
 
+    def _handle_button_group_status(self, resp_json):
+        _LOG.debug("Handling button group status: %s", resp_json)
+        statuses = resp_json.get('Body', {}).get('ButtonGroupStatuses', {})
+        for status in statuses:
+            buttongroup_id = id_from_href(status['ButtonGroup']['href'])
+            bstat = status['ButtonGroup']
+            if buttongroup_id not in self.button_groups:
+                if bstat != BUTTON_GROUP_UNKNOWN:
+                    _LOG.warning("Button group %s has a status but no "
+                                 "sensors", buttongroup_id)
+                continue
+            if bstat == BUTTON_GROUP_UNKNOWN:
+                _LOG.warning("Button group %s has sensors but no status",
+                             buttongroup_id)
+            self.button_groups[buttongroup_id]['status'] = bstat
+            # Notify any subscribers of the change to button status
+            if buttongroup_id in self._button_subscribers:
+                self._button_subscribers[buttongroup_id]()
+
     _read_response_handler_callbacks = dict(
         OneZoneStatus=_handle_one_zone_status,
         OnePingResponse=_handle_one_ping_response,
         MultipleOccupancyGroupStatus=_handle_occupancy_group_status,
+        MultipleButtonGroupStatus=_handle_button_group_status,
     )
 
     def _handle_read_response(self, resp_json):
@@ -398,7 +429,9 @@ class Smartbridge:
             await self._load_scenes()
             await self._load_areas()
             await self._load_occupancy_groups()
+            await self._load_button_groups()
             await self._subscribe_to_occupancy_groups()
+            await self._subscribe_to_button_groups()
             for device in self.devices.values():
                 if device.get('zone') is not None:
                     _LOG.debug("Requesting zone information from %s", device)
@@ -545,6 +578,60 @@ class Smartbridge:
             _LOG.error("Failed occupancy subscription: %s", response)
             return
         self._handle_occupancy_group_status(response)
+
+
+    async def _load_button_groups(self):
+        """Load the button groups from the Smart Bridge."""
+        _LOG.debug("Loading button groups from the Smart Bridge")
+        self._writer.write(
+            dict(CommuniqueType="ReadRequest",
+                 Header=dict(Url="/buttongroup"))
+        )
+        buttongroup_json = await self._reader.wait_for("ReadResponse")
+        buttongroups = buttongroup_json.get("Body", {}).get("ButtonGroups", {})
+        for buttongroup in buttongroups:
+            self._process_button_group(buttongroup)
+
+    def _process_button_group(self, buttongroup):
+        """Process button group."""
+        buttongroup_id = id_from_href(buttongroup["href"])
+        if not buttongroup.get('AssociatedSensors'):
+            _LOG.debug("No sensors associated with %s", buttongroup['href'])
+            return
+        _LOG.debug("Found button group with sensors: %s", buttongroup_id)
+        associated_areas = buttongroup.get('AssociatedAreas', [])
+        if not associated_areas:
+            _LOG.error('No associated areas found with button group '
+                       'containing sensors: %s -- skipping', buttongroup_id)
+            return
+        if len(associated_areas) > 1:
+            _LOG.warning("Button group %s associated with multiple "
+                         "areas. Naming based on first area.", buttongroup_id)
+        buttongroup_area_id = id_from_href(associated_areas[0]['Area']['href'])
+        if buttongroup_area_id not in self.areas:
+            _LOG.error('Unknown parent area for button group %s: %s',
+                       buttongroup_id, buttongroup_area_id)
+            return
+        self.button_groups[buttongroup_id] = dict(
+            button_group_id=buttongroup_id,
+            name='{} Button'.format(self.areas[buttongroup_area_id]['name']),
+            status=BUTTON_GROUP_UNKNOWN,
+        )
+
+    async def _subscribe_to_button_groups(self):
+        """Subscribe to button group status updates."""
+        _LOG.debug("Subscribing to button group status updates")
+        self._writer.write(
+            dict(CommuniqueType="SubscribeRequest",
+                 Header=dict(Url="/buttongroup/status"))
+        )
+        response = await self._reader.wait_for("SubscribeResponse")
+        if response["Header"]["StatusCode"].startswith("20"):
+            _LOG.debug("Subscribed to buttongroup status")
+        else:
+            _LOG.error("Failed button subscription: %s", response)
+            return
+        self._handle_button_group_status(response)
 
     async def close(self):
         """Disconnect from the bridge."""
