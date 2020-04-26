@@ -586,6 +586,7 @@ class Smartbridge:
         self._writer.write(
             dict(CommuniqueType="ReadRequest",
                  Header=dict(Url="/buttongroup"))
+                 #PressAndRelease
         )
         buttongroup_json = await self._reader.wait_for("ReadResponse")
         buttongroups = buttongroup_json.get("Body", {}).get("ButtonGroups", {})
@@ -595,26 +596,21 @@ class Smartbridge:
     def _process_button_group(self, buttongroup):
         """Process button group."""
         buttongroup_id = id_from_href(buttongroup["href"])
-        if not buttongroup.get('AssociatedSensors'):
-            _LOG.debug("No sensors associated with %s", buttongroup['href'])
+        parent = buttongroup.get('Parent', [])
+        if not parent:
+            _LOG.error('No parent found with button group '
+                       '%s -- skipping', buttongroup_id)
             return
-        _LOG.debug("Found button group with sensors: %s", buttongroup_id)
-        associated_areas = buttongroup.get('AssociatedAreas', [])
-        if not associated_areas:
-            _LOG.error('No associated areas found with button group '
-                       'containing sensors: %s -- skipping', buttongroup_id)
-            return
-        if len(associated_areas) > 1:
-            _LOG.warning("Button group %s associated with multiple "
-                         "areas. Naming based on first area.", buttongroup_id)
-        buttongroup_area_id = id_from_href(associated_areas[0]['Area']['href'])
-        if buttongroup_area_id not in self.areas:
-            _LOG.error('Unknown parent area for button group %s: %s',
-                       buttongroup_id, buttongroup_area_id)
-            return
+        device_id = id_from_href(parent["href"])
+        buttons = []
+        for button in buttongroup["Buttons"]:
+            button_id = id_from_href(button["href"])
+            buttons.append(button_id)
         self.button_groups[buttongroup_id] = dict(
             button_group_id=buttongroup_id,
-            name='{} Button'.format(self.areas[buttongroup_area_id]['name']),
+            parent_device_id=device_id,
+            buttons=buttons,
+            name=self.devices[device_id]['name'],
             status=BUTTON_GROUP_UNKNOWN,
         )
 
@@ -623,7 +619,7 @@ class Smartbridge:
         _LOG.debug("Subscribing to button group status updates")
         self._writer.write(
             dict(CommuniqueType="SubscribeRequest",
-                 Header=dict(Url="/buttongroup/status"))
+                Header=dict(Url="/buttongroup"))
         )
         response = await self._reader.wait_for("SubscribeResponse")
         if response["Header"]["StatusCode"].startswith("20"):
