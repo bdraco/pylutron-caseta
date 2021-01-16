@@ -57,7 +57,7 @@ async def async_pair(server_addr):
     """Pair with a lutron bridge."""
     loop = asyncio.get_running_loop()
     csr, key_bytes_pem, ssl_context = await loop.run_in_executor(
-        None, _generate_csr_with_ssl_context, server_addr
+        None, _generate_csr_with_ssl_context
     )
 
     cert_pem, ca_pem = await _async_generate_certificate(server_addr, ssl_context, csr)
@@ -182,7 +182,7 @@ async def _async_verify_certificate(server_addr, signed_ssl_context):
             return leap_response
 
 
-def _generate_csr_with_ssl_context(server_addr):
+def _generate_csr_with_ssl_context():
     lap_cert_temp_file = tempfile.NamedTemporaryFile()
     lap_key_temp_file = tempfile.NamedTemporaryFile()
 
