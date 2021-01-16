@@ -80,18 +80,18 @@ async def _async_generate_certificate(server_addr, ssl_context, csr):
     import pprint
 
     pprint.pprint(["_async_generate_certificate", server_addr, ssl_context, csr])
-    json_socket = JsonSocket(
-        await asyncio.wait_for(
-            asyncio.open_connection(
-                server_addr,
-                8083,
-                server_hostname="",
-                ssl=ssl_context,
-                family=socket.AF_INET,
-            ),
-            timeout=SOCKET_TIMEOUT,
-        )
+    reader, writer = await asyncio.wait_for(
+        asyncio.open_connection(
+            server_addr,
+            8083,
+            server_hostname="",
+            ssl=ssl_context,
+            family=socket.AF_INET,
+        ),
+        timeout=SOCKET_TIMEOUT,
     )
+    json_socket = JsonSocket(reader, writer)
+
     pprint.pprint("json_socket")
 
     LOGGER.info("Press the small black button on the back of the Caseta bridge...")
@@ -134,18 +134,18 @@ async def _async_generate_certificate(server_addr, ssl_context, csr):
 
 
 async def async_verify_certificate(server_addr, signed_ssl_context):
-    json_socket = JsonSocket(
-        await asyncio.wait_for(
-            asyncio.open_connection(
-                server_addr,
-                8081,
-                server_hostname="",
-                ssl=signed_ssl_context,
-                family=socket.AF_INET,
-            ),
-            timeout=SOCKET_TIMEOUT,
-        )
+    reader, writer = await asyncio.wait_for(
+        asyncio.open_connection(
+            server_addr,
+            8081,
+            server_hostname="",
+            ssl=signed_ssl_context,
+            family=socket.AF_INET,
+        ),
+        timeout=SOCKET_TIMEOUT,
     )
+    json_socket = JsonSocket(reader, writer)
+
     await json_socket.async_write_json(
         {
             "CommuniqueType": "ReadRequest",
