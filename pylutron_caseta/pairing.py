@@ -73,6 +73,13 @@ async def async_pair(server_addr):
     LOGGER.debug(
         "Successfully connected to bridge, running LEAP Server version %s", version
     )
+    import pprint
+    pprint.pprint({
+        PAIR_KEY: key_bytes_pem.decode("ASCII"),
+        PAIR_CERT: cert_pem,
+        PAIR_CA: ca_pem,
+        PAIR_VERSION: version,
+    })
 
     return {
         PAIR_KEY: key_bytes_pem.decode("ASCII"),
