@@ -77,15 +77,23 @@ class JsonSocket:
 
 
 async def _async_generate_certificate(server_addr, ssl_context, csr):
+    import pprint
+
+    pprint.pprint(["_async_generate_certificate", server_addr, ssl_context, csr])
     json_socket = JsonSocket(
-        await asyncio.open_connection(
-            server_addr,
-            8083,
-            server_hostname="",
-            ssl=ssl_context,
-            family=socket.AF_INET,
+        await asyncio.wait_for(
+            asyncio.open_connection(
+                server_addr,
+                8083,
+                server_hostname="",
+                ssl=ssl_context,
+                family=socket.AF_INET,
+            ),
+            timeout=SOCKET_TIMEOUT,
         )
     )
+    pprint.pprint("json_socket")
+
     LOGGER.info("Press the small black button on the back of the Caseta bridge...")
     while True:
         message = await json_socket.async_read_json(BUTTON_PRESS_TIMEOUT)
@@ -127,12 +135,15 @@ async def _async_generate_certificate(server_addr, ssl_context, csr):
 
 async def async_verify_certificate(server_addr, signed_ssl_context):
     json_socket = JsonSocket(
-        await asyncio.open_connection(
-            server_addr,
-            8081,
-            server_hostname="",
-            ssl=signed_ssl_context,
-            family=socket.AF_INET,
+        await asyncio.wait_for(
+            asyncio.open_connection(
+                server_addr,
+                8081,
+                server_hostname="",
+                ssl=signed_ssl_context,
+                family=socket.AF_INET,
+            ),
+            timeout=SOCKET_TIMEOUT,
         )
     )
     await json_socket.async_write_json(
@@ -151,13 +162,16 @@ async def async_verify_certificate(server_addr, signed_ssl_context):
 async def async_pair(server_addr):
     """Pair with a lutron bridge."""
     loop = asyncio.get_running_loop()
-    csr, key_bytes_pem, ssl_context = loop.run_in_executor(
+    csr, key_bytes_pem, ssl_context = await loop.run_in_executor(
         None, _generate_csr_with_ssl_context, server_addr
     )
 
+    import pprint
+
+    pprint.pprint([csr, key_bytes_pem, ssl_context])
     cert_pem, ca_pem = await _async_generate_certificate(server_addr, ssl_context, csr)
 
-    signed_ssl_context = loop.run_in_executor(
+    signed_ssl_context = await loop.run_in_executor(
         None, _generate_signed_ssl_context, key_bytes_pem, cert_pem, ca_pem
     )
 
