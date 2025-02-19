@@ -1,21 +1,21 @@
 {
-	"name": "Python 3.11",
-	"image": "mcr.microsoft.com/vscode/devcontainers/python:1-3.11",
-	"containerUser": "vscode",
-	"customizations": {
-		"vscode": {
-			"settings": {
-				"python.analysis.typeCheckingMode": "basic",
-				"python.defaultInterpreterPath": "/home/vscode/.env/default/bin/python"
-			},
-			"extensions": [
-				"charliermarsh.ruff",
-				"ms-python.mypy-type-checker",
-				"ms-python.python",
-				"visualstudioexptteam.vscodeintellicode",
-				"esbenp.prettier-vscode"
-			]
-		}
-	},
-	"updateContentCommand": "bash ./.devcontainer/updateContent.sh"
+  "name": "Python 3.11",
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:1-3.11",
+  "containerUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.analysis.typeCheckingMode": "basic",
+        "python.defaultInterpreterPath": "/home/vscode/.env/default/bin/python"
+      },
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "ms-python.python",
+        "visualstudioexptteam.vscodeintellicode",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "updateContentCommand": "bash ./.devcontainer/updateContent.sh"
 }

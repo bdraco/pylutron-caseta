@@ -1,40 +1,36 @@
 """Tests to validate ssl interactions."""
+
 import asyncio
-from collections import defaultdict
-from datetime import timedelta
-import orjson
 import logging
 import os
 import re
+from collections import defaultdict
+from collections.abc import AsyncGenerator, Callable, Coroutine
+from datetime import timedelta
 from typing import (
     Any,
-    AsyncGenerator,
-    Callable,
-    Coroutine,
-    Dict,
-    List,
     NamedTuple,
     Optional,
-    Tuple,
     TypeVar,
 )
 
-import pytest
 import pytest_asyncio
-
-from pylutron_caseta.leap import id_from_href
-from pylutron_caseta.messages import Response, ResponseHeader, ResponseStatus
 from pylutron_caseta import (
     _LEAP_DEVICE_TYPES,
+    BUTTON_STATUS_PRESSED,
     FAN_MEDIUM,
     OCCUPANCY_GROUP_OCCUPIED,
-    OCCUPANCY_GROUP_UNOCCUPIED,
     OCCUPANCY_GROUP_UNKNOWN,
-    BUTTON_STATUS_PRESSED,
+    OCCUPANCY_GROUP_UNOCCUPIED,
     BridgeDisconnectedError,
-    smartbridge,
     color_value,
+    smartbridge,
 )
+from pylutron_caseta.leap import id_from_href
+from pylutron_caseta.messages import Response, ResponseHeader, ResponseStatus
+
+import orjson
+import pytest
 
 logging.getLogger().setLevel(logging.DEBUG)
 _LOG = logging.getLogger(__name__)
@@ -53,7 +49,7 @@ RESPONSE_PATH = {
 def response_from_json_file(filename: str) -> Response:
     """Fetch a response from a saved JSON file."""
     responsedir = os.path.join(os.path.split(__file__)[0], "responses")
-    with open(os.path.join(responsedir, filename), "r", encoding="utf-8") as ifh:
+    with open(os.path.join(responsedir, filename), encoding="utf-8") as ifh:
         return Response.from_json(orjson.loads(ifh.read()))
 
 
@@ -68,14 +64,14 @@ class Request(NamedTuple):
 
 class _FakeLeap:
     def __init__(self) -> None:
-        self.requests: "asyncio.Queue[Tuple[Request, asyncio.Future[Response]]]" = (
+        self.requests: asyncio.Queue[tuple[Request, asyncio.Future[Response]]] = (
             asyncio.Queue()
         )
         self.running = None
-        self._subscriptions: Dict[str, List[Callable[[Response], None]]] = defaultdict(
+        self._subscriptions: dict[str, list[Callable[[Response], None]]] = defaultdict(
             list
         )
-        self._unsolicited: List[Callable[[Response], None]] = []
+        self._unsolicited: list[Callable[[Response], None]] = []
 
     async def request(
         self,
@@ -100,7 +96,7 @@ class _FakeLeap:
         callback: Callable[[Response], None],
         body: Optional[dict] = None,
         communique_type: str = "SubscribeRequest",
-    ) -> Tuple[Response, str]:
+    ) -> tuple[Response, str]:
         """Subscribe to events from the bridge."""
         response = await self.request(communique_type, url, body)
         self._subscriptions[url].append(callback)
@@ -368,12 +364,14 @@ class Bridge:
                 )
 
     def _populate_button_list_from_buttongroups(self, buttongroups, bridge_type):
-        """Add buttons from a set of buttongroups to the proper processor list
+        """
+        Add buttons from a set of buttongroups to the proper processor list
         to support subscribe tests
 
         Args:
             buttongroups: A set of buttongroups
             bridge_type: The bridge or processor type
+
         """
         buttons = []
         buttons.extend(
@@ -389,12 +387,14 @@ class Bridge:
             self.qsx_button_list.extend(buttons)
 
     def _populate_button_led_list_from_buttongroups(self, buttongroups, bridge_type):
-        """Add button LEDs from a set of buttongroups to the proper processor list
+        """
+        Add button LEDs from a set of buttongroups to the proper processor list
         to support subscribe tests
 
         Args:
             buttongroups: A set of buttongroups
             bridge_type: The bridge or processor type
+
         """
         button_leds = []
         for group in buttongroups:

@@ -2,11 +2,12 @@
 
 import asyncio
 import logging
+import os
 import socket
 import ssl
 import tempfile
-from typing import Callable, Optional, Tuple, TypedDict
-import os
+from collections.abc import Callable
+from typing import Optional, TypedDict
 
 import orjson
 from cryptography import x509
@@ -119,7 +120,7 @@ async def _async_generate_certificate(
     ssl_context: ssl.SSLContext,
     csr: x509.CertificateSigningRequest,
     ready: Optional[Callable[[], None]],
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     async with asyncio_timeout(SOCKET_TIMEOUT):
         reader, writer = await asyncio.open_connection(
             server_addr,
@@ -218,9 +219,9 @@ async def _async_verify_certificate(server_addr, signed_ssl_context):
             return leap_response
 
 
-def _generate_csr_with_ssl_context() -> (
-    Tuple[x509.CertificateSigningRequest, bytes, ssl.SSLContext]
-):
+def _generate_csr_with_ssl_context() -> tuple[
+    x509.CertificateSigningRequest, bytes, ssl.SSLContext
+]:
     with tempfile.NamedTemporaryFile(delete=False) as lap_cert_temp_file:
         with tempfile.NamedTemporaryFile(delete=False) as lap_key_temp_file:
             try:

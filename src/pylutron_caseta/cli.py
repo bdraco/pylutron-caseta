@@ -6,19 +6,20 @@ import logging
 import socket
 import ssl
 import urllib.parse
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, List, Optional, TextIO, BinaryIO
+from typing import Any, BinaryIO, Optional, TextIO
 from urllib.parse import urlparse
 
-import orjson
 import click
 import xdg
-from zeroconf import DNSQuestionType, InterfaceChoice, ServiceListener
-from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
+import orjson
 import pylutron_caseta.leap
 from pylutron_caseta.pairing import async_pair
+from zeroconf import DNSQuestionType, InterfaceChoice, ServiceListener
+from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
 
 def _cli_main(main):
@@ -143,8 +144,7 @@ async def lap_pair(address: str, cacert: TextIO, cert: TextIO, key: TextIO):
     "--interface",
     multiple=True,
     help=(
-        "Limit scanned network interfaces. "
-        "This option may be specified multiple times."
+        "Limit scanned network interfaces. This option may be specified multiple times."
     ),
 )
 @click.option(
@@ -155,7 +155,7 @@ async def lap_pair(address: str, cacert: TextIO, cert: TextIO, key: TextIO):
     show_default=True,
     help="The amount of time (in seconds) to wait for replies.",
 )
-async def leap_scan(interface: List[str], timeout: float):
+async def leap_scan(interface: list[str], timeout: float):
     """
     Scan for LEAP devices on the local network.
 

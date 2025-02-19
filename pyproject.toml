@@ -39,6 +39,10 @@ leap-scan = "pylutron_caseta.cli:leap_scan[cli]"
 [project.urls]
 Homepage = "https://github.com/gurumitts/pylutron-caseta"
 
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",

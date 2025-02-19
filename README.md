@@ -14,7 +14,7 @@ In order to communicate with the bridge device, you must complete the pairing pr
 
 #### lap-pair
 
-If pylutron_caseta is installed with the cli extra (`pip install pylutron_caseta[cli]`), the `lap-pair` tool can be used to generate the certificate files. Simply running `lap-pair <BRIDGE HOST>` (note the LEAP port number should not be included) will begin the pairing process. The certificate files will be saved in `$XDG_CONFIG_HOME/pylutron_caseta` (normally `~/.config/pylutron_caseta`) in the files `[BRIDGE HOST]-bridge.crt`, `[BRIDGE HOST].crt`,  `[BRIDGE HOST].key`. Check `lap-pair --help` if you want to use different files.
+If pylutron_caseta is installed with the cli extra (`pip install pylutron_caseta[cli]`), the `lap-pair` tool can be used to generate the certificate files. Simply running `lap-pair <BRIDGE HOST>` (note the LEAP port number should not be included) will begin the pairing process. The certificate files will be saved in `$XDG_CONFIG_HOME/pylutron_caseta` (normally `~/.config/pylutron_caseta`) in the files `[BRIDGE HOST]-bridge.crt`, `[BRIDGE HOST].crt`, `[BRIDGE HOST].key`. Check `lap-pair --help` if you want to use different files.
 
 #### The pairing module
 

@@ -1,14 +1,16 @@
 """Tests to validate low-level network interactions."""
+
 import asyncio
-import orjson
-from typing import AsyncGenerator, Iterable, NamedTuple, Tuple
+from collections.abc import AsyncGenerator, Iterable
+from typing import NamedTuple
 
-import pytest
 import pytest_asyncio
-
 from pylutron_caseta import BridgeDisconnectedError
 from pylutron_caseta.leap import LeapProtocol
 from pylutron_caseta.messages import Response, ResponseHeader, ResponseStatus
+
+import orjson
+import pytest
 
 
 class Pipe(NamedTuple):
@@ -50,7 +52,7 @@ class _PipeTransport(asyncio.Transport):
     def get_write_buffer_size(self) -> int:
         return 0
 
-    def get_write_buffer_limits(self) -> Tuple[int, int]:
+    def get_write_buffer_limits(self) -> tuple[int, int]:
         """Return (0, 0)."""
         return (0, 0)
 

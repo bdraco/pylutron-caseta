@@ -4,7 +4,8 @@ import asyncio
 import logging
 import re
 import uuid
-from typing import Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Optional
 
 import orjson
 
@@ -30,9 +31,9 @@ class LeapProtocol:
         """Wrap a reader and writer with a LEAP request and response protocol."""
         self._reader = reader
         self._writer = writer
-        self._in_flight_requests: Dict[str, "asyncio.Future[Response]"] = {}
-        self._tagged_subscriptions: Dict[str, Callable[[Response], None]] = {}
-        self._unsolicited_subs: List[Callable[[Response], None]] = []
+        self._in_flight_requests: dict[str, asyncio.Future[Response]] = {}
+        self._tagged_subscriptions: dict[str, Callable[[Response], None]] = {}
+        self._unsolicited_subs: list[Callable[[Response], None]] = []
 
     async def request(
         self,
@@ -125,7 +126,7 @@ class LeapProtocol:
         body: Optional[dict] = None,
         communique_type: str = "SubscribeRequest",
         tag: Optional[str] = None,
-    ) -> Tuple[Response, str]:
+    ) -> tuple[Response, str]:
         """
         Subscribe to events from the bridge.
 
@@ -193,7 +194,8 @@ _HREFRE = re.compile(r"/(?:\D+)/(\d+)(?:\/\D+)?")
 
 
 def id_from_href(href: str) -> str:
-    """Get an id from any kind of href.
+    """
+    Get an id from any kind of href.
 
     Raises ValueError if id cannot be determined from the format
     """

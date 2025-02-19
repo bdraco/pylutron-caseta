@@ -5,11 +5,11 @@ import logging
 import math
 import socket
 import ssl
+from collections.abc import Callable, Coroutine
 from datetime import timedelta
-from typing import Callable, Dict, List, Optional, Tuple, Union, Coroutine, Any
+from typing import Any, Optional, Union
 
 from .color_value import ColorMode, WarmDimmingColorValue
-
 
 try:
     from asyncio import get_running_loop as get_loop
@@ -50,16 +50,16 @@ class Smartbridge:
         self, connect: Callable[[], Coroutine[Any, Any, LeapProtocol]]
     ) -> None:
         """Initialize the Smart Bridge."""
-        self.devices: Dict[str, dict] = {}
-        self.buttons: Dict[str, dict] = {}
-        self.lip_devices: Dict[int, dict] = {}
-        self.scenes: Dict[str, dict] = {}
-        self.occupancy_groups: Dict[str, dict] = {}
-        self.areas: Dict[str, dict] = {}
+        self.devices: dict[str, dict] = {}
+        self.buttons: dict[str, dict] = {}
+        self.lip_devices: dict[int, dict] = {}
+        self.scenes: dict[str, dict] = {}
+        self.occupancy_groups: dict[str, dict] = {}
+        self.areas: dict[str, dict] = {}
         self._connect = connect
-        self._subscribers: Dict[str, Callable[[], None]] = {}
-        self._occupancy_subscribers: Dict[str, Callable[[], None]] = {}
-        self._button_subscribers: Dict[str, Callable[[str], None]] = {}
+        self._subscribers: dict[str, Callable[[], None]] = {}
+        self._occupancy_subscribers: dict[str, Callable[[], None]] = {}
+        self._button_subscribers: dict[str, Callable[[str], None]] = {}
         self._login_task: Optional[asyncio.Task] = None
         # Use future so we can wait before the login starts and
         # don't need to wait for "login" on reconnect.
@@ -114,7 +114,8 @@ class Smartbridge:
     def _create_tls_context(
         keyfile: str, certfile: str, ca_certs: str
     ) -> ssl.SSLContext:
-        """Create a TLS context for the Smart Bridge.
+        """
+        Create a TLS context for the Smart Bridge.
 
         This is called in the executor to avoid blocking the event loop
         since calling load_cert_chain and load_verify_locations does
@@ -182,15 +183,15 @@ class Smartbridge:
         """
         self._button_subscribers[button_id] = callback_
 
-    def get_devices(self) -> Dict[str, dict]:
+    def get_devices(self) -> dict[str, dict]:
         """Will return all known devices connected to the bridge/processor."""
         return self.devices
 
-    def get_buttons(self) -> Dict[str, dict]:
+    def get_buttons(self) -> dict[str, dict]:
         """Will return all known buttons connected to the bridge/processor."""
         return self.buttons
 
-    def get_devices_by_domain(self, domain: str) -> List[dict]:
+    def get_devices_by_domain(self, domain: str) -> list[dict]:
         """
         Return a list of devices for the given domain.
 
@@ -205,7 +206,7 @@ class Smartbridge:
 
         return self.get_devices_by_types(types)
 
-    def get_devices_by_type(self, type_: str) -> List[dict]:
+    def get_devices_by_type(self, type_: str) -> list[dict]:
         """
         Will return all devices of a given device type.
 
@@ -227,7 +228,7 @@ class Smartbridge:
                 return device
         raise KeyError(f"No device associated with zone {zone_id}")
 
-    def get_devices_by_types(self, types: List[str]) -> List[dict]:
+    def get_devices_by_types(self, types: list[str]) -> list[dict]:
         """
         Will return all devices for a list of given device types.
 
@@ -243,7 +244,7 @@ class Smartbridge:
         """
         return self.devices[device_id]
 
-    def get_scenes(self) -> Dict[str, dict]:
+    def get_scenes(self) -> dict[str, dict]:
         """Will return all known scenes from the Smart Bridge."""
         return self.scenes
 
@@ -314,7 +315,7 @@ class Smartbridge:
         callback: Callable[[Response], None],
         communique_type: str = "SubscribeRequest",
         body: Optional[dict] = None,
-    ) -> Tuple[Response, str]:
+    ) -> tuple[Response, str]:
         if self._leap is None:
             raise BridgeDisconnectedError()
 
@@ -350,7 +351,7 @@ class Smartbridge:
         if not zone_id:
             return
 
-        params: Dict[str, Union[str, int]] = {}
+        params: dict[str, Union[str, int]] = {}
         if value is not None:
             params["Level"] = value
         if fade_time is not None:
@@ -408,7 +409,7 @@ class Smartbridge:
 
         # Handle Ketra lamps and Lumaris RGB + Tunable White Tape Light
         if device.get("type") in ["SpectrumTune", "ColorTune"]:
-            spectrum_params: Dict[str, Union[str, int]] = {}
+            spectrum_params: dict[str, Union[str, int]] = {}
             if value is not None:
                 spectrum_params["Level"] = value
             if color_value is not None:
@@ -431,7 +432,7 @@ class Smartbridge:
 
         # Handle Lumaris Tape Light
         if device.get("type") == "WhiteTune":
-            white_params: Dict[str, Union[str, int]] = {}
+            white_params: dict[str, Union[str, int]] = {}
             if value is not None:
                 white_params["Level"] = value
             if color_value is not None:
@@ -640,10 +641,10 @@ class Smartbridge:
         # ignore OSError too.
         # sometimes you get OSError instead of ConnectionError.
         except (
+            TimeoutError,
             ValueError,
             ConnectionError,
             OSError,
-            asyncio.TimeoutError,
             BridgeDisconnectedError,
         ) as ex:
             _LOG.warning("Reconnecting after error: %s", ex)
@@ -771,10 +772,10 @@ class Smartbridge:
         statuses = response.Body.get("AreaStatuses", [])
         for status in statuses:
             occgroup_id = id_from_href(status["href"])
-            if occgroup_id.endswith("/status"):
+            if occgroup_id.endswitch("/status"):
                 occgroup_id = occgroup_id[:-7]
             # Check to see if the OccupancyStatus Key exists in the response.
-            # Sometimes in just responds swith the CurrentScene key
+            # Sometimes in just responds switch the CurrentScene key
             if "OccupancyStatus" in status:
                 ostat = status["OccupancyStatus"]
                 if occgroup_id not in self.occupancy_groups:
@@ -863,7 +864,7 @@ class Smartbridge:
             while True:
                 await asyncio.sleep(PING_INTERVAL)
                 await self._request("ReadRequest", "/server/1/status/ping")
-        except asyncio.TimeoutError:
+        except TimeoutError:
             _LOG.warning("ping was not answered. closing connection.")
             self._leap.close()
         except asyncio.CancelledError:
