@@ -8,7 +8,6 @@ import ssl
 import sys
 from datetime import timedelta
 from typing import Callable, Dict, List, Optional, Tuple, Union, Coroutine, Any
-from contextlib import suppress
 from .color_value import ColorMode, WarmDimmingColorValue
 
 
@@ -1462,8 +1461,6 @@ class Smartbridge:
         for task in (self._monitor_task, self._ping_task, self._login_task):
             if task is not None and not task.done():
                 task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
 
 
 def _format_duration(duration: timedelta) -> str:
